@@ -21,10 +21,19 @@ function downloadSkuLabel(product) {
 
 const warehousePageBeforeLabelDownload = warehousePage;
 warehousePage = function () {
-  return warehousePageBeforeLabelDownload().replace(
+  let html = warehousePageBeforeLabelDownload().replace(
     '<button class="btn small" data-action="print-warehouse-label">Imprimir esta etiqueta</button>',
     `<div class="label-actions"><button class="btn small" data-action="download-label" data-code="${esc(warehouseSelected)}">Descargar etiqueta</button><button class="btn small" data-action="print-warehouse-label">Imprimir esta etiqueta</button></div>`
   );
+  const marker = '<div class="warehouse-mini-steps">';
+  const start = html.indexOf(marker);
+  if (start >= 0) {
+    const end = html.indexOf('</div>', start) + 6;
+    const product = S?.products.find(item => item.code === warehouseSelected && item.recommended_count);
+    const access = `<section class="warehouse-label-access"><div><strong>Etiquetas para pegar en los productos</strong><p>Descarga la etiqueta y luego escanéala aquí en WMS.</p></div>${product ? `<button class="btn small primary" data-action="download-label" data-code="${esc(product.code)}">Descargar etiqueta de la tarea</button>` : ''}<button class="btn small" data-action="open-labels">Buscar otro producto</button></section>`;
+    html = html.slice(0, end) + access + html.slice(end);
+  }
+  return html;
 };
 
 const currentPositionBeforeCountGuidance = currentPosition;
@@ -48,8 +57,48 @@ foundProduct = function (code) {
 
 const renderBeforeActionConnectors = render;
 let previousManagerCountAlerts = null;
+function renderRopNextStep() {
+  const products = S?.products || [];
+  const ready = products.filter(product => product.rop != null && product.position != null);
+  const needsOrder = ready.filter(product => product.position <= product.rop).sort((a, b) => (a.position - a.rop) - (b.position - b.rop));
+  const countTasks = products.filter(product => product.recommended_count && (product.count_alert || product.wms_alert)).sort((a, b) => (b.priority || 0) - (a.priority || 0));
+  const incomplete = products.length - ready.length;
+  const firstCount = countTasks[0];
+  const firstOrder = needsOrder.find(product => product.suggested > 0 && !product.open_request);
+  let message, action = '';
+  if (!products.length) {
+    message = 'Todavía no hay productos cargados para calcular reposición.';
+    action = '<button class="btn small primary" data-go="integration">Cargar productos</button>';
+  } else if (!ready.length) {
+    message = 'Aún no se puede calcular el ROP. Faltan datos confirmados de demanda, plazo o colchón.';
+    action = '<button class="btn small primary" data-go="integration">Completar datos</button>';
+  } else if (firstCount) {
+    message = `${firstCount.name} es el siguiente producto que debe verificarse físicamente. ${firstCount.wms_alert ? 'Ya llegó al punto de pedido.' : 'Se acerca al punto de pedido.'} A y B se priorizan por su movimiento.`;
+    action = `<button class="btn small primary" data-action="count" data-code="${esc(firstCount.code)}">Contar este producto</button>`;
+  } else if (firstOrder) {
+    message = `${firstOrder.name} está bajo su punto de pedido y ya no tiene un conteo pendiente. El encargado puede preparar la solicitud.`;
+    action = `<button class="btn small primary" data-action="request" data-code="${esc(firstOrder.code)}">Preparar borrador a Santiago</button>`;
+  } else {
+    message = `Hoy hay 0 productos bajo el punto de pedido. ${ready.length} productos tienen cálculo disponible.`;
+  }
+  if (needsOrder.length && !firstCount && !firstOrder) message += ` Hay ${needsOrder.length} producto(s) para revisar en el módulo de reposición.`;
+  return `<section class="rop-next-step"><div class="rop-next-copy"><span>ROP · QUÉ HACER AHORA</span><h2>${firstCount ? 'Primero, confirma el inventario físico' : needsOrder.length ? 'Revisa la reposición' : ready.length ? 'No hay reposiciones urgentes' : 'Faltan datos para empezar'}</h2><p>${message}</p>${incomplete ? `<small>${incomplete} producto(s) sin datos suficientes; no generan alertas ROP.</small>` : ''}</div><div class="rop-next-actions">${action}${countTasks.length ? `<button class="btn small" data-go="counts">Ver conteos pendientes (${countTasks.length})</button>` : ''}</div></section>`;
+}
 render = function () {
   renderBeforeActionConnectors();
+  if (page === 'replenish') {
+    const pageTop = document.querySelector('#page .page-top');
+    if (pageTop && !document.querySelector('#page .rop-next-step')) pageTop.insertAdjacentHTML('afterend', renderRopNextStep());
+    document.querySelector('#page .workflow-lesson')?.remove();
+    const grids = [...document.querySelectorAll('#page .rop-analysis-grid')];
+    if (grids.length && !document.querySelector('#page .rop-technical-details')) {
+      const details = document.createElement('details');
+      details.className = 'rop-technical-details';
+      details.innerHTML = '<summary>Ver cálculo, gráfico y datos de respaldo</summary>';
+      grids[0].before(details);
+      grids.forEach(grid => details.append(grid));
+    }
+  }
   if (!warehouseMode && page === 'overview') {
     const key = (S?.products || []).filter(product => product.recommended_count && product.count_alert).map(product => product.code).join('|');
     if (previousManagerCountAlerts !== null && key && key !== previousManagerCountAlerts) toast('Nuevos conteos preventivos para revisar antes del ROP.');
@@ -68,13 +117,27 @@ render = function () {
 };
 
 document.addEventListener('click', event => {
-  const button = event.target.closest('[data-action="download-label"],[data-action="download-one-label"],[data-action="open-labels"]');
+  const button = event.target.closest('[data-action="download-label"],[data-action="download-one-label"],[data-action="open-labels"],[data-action="wms-print-label"]');
   if (!button) return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  if (button.dataset.action === 'open-labels') { navigate('labels'); return; }
+  if (button.dataset.action === 'open-labels') {
+    if (!warehouseMode) { navigate('labels'); return; }
+    const product = S.products.find(item => item.code === warehouseSelected) || S.products[0];
+    const options = S.products.map(item => `<option value="${esc(item.code)}" ${item.code === product?.code ? 'selected' : ''}>${esc(item.code + ' · ' + item.name)}</option>`).join('');
+    showModal('Etiquetas para la bodega', 'Elige el producto que vas a identificar con una etiqueta escaneable.', `<label for="wms-label-picker">Producto</label><select id="wms-label-picker">${options}</select><div id="wms-label-preview">${product ? `${labelMarkup(product)}<div class="label-actions"><button class="btn small primary" data-action="download-label" data-code="${esc(product.code)}">Descargar etiqueta</button><button class="btn small" data-action="wms-print-label" data-code="${esc(product.code)}">Imprimir etiqueta</button></div>` : 'No hay productos cargados.'}</div>`);
+    return;
+  }
+  if (button.dataset.action === 'wms-print-label') { labelSelection = new Set([button.dataset.code]); printLabels(); return; }
   downloadSkuLabel(S?.products.find(item => item.code === button.dataset.code));
 }, true);
+
+document.addEventListener('change', event => {
+  if (event.target.id !== 'wms-label-picker') return;
+  const product = S?.products.find(item => item.code === event.target.value);
+  if (!product) return;
+  $('#wms-label-preview').innerHTML = `${labelMarkup(product)}<div class="label-actions"><button class="btn small primary" data-action="download-label" data-code="${esc(product.code)}">Descargar etiqueta</button><button class="btn small" data-action="wms-print-label" data-code="${esc(product.code)}">Imprimir etiqueta</button></div>`;
+});
 
 setInterval(() => {
   if (!warehouseMode && S && page === 'overview' && !document.querySelector('#modal[open]')) load();
