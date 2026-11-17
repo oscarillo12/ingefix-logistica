@@ -1,0 +1,33 @@
+{
+  "sales": {
+    "file": "VENTAS PROMEDIO.pdf",
+    "pages": 1,
+    "text": "GB Ingenieria en Fijaciones S.A.\nImport., Exportacion y Comercializacion 1Página :\nCamino Punta Mocha 5103 16/11/2026Fecha :\n99.530.740-5\nSantiago\nHuechuraba\nLibro de Ventas\nBodega : 08 [INGEFIX TEMUCO] Desde : 01/07/2026 Hasta : 31/10/2026\nNº Dcto. Fecha Estado Nombre Cliente RUT Neto Afecto $ I.V .A. $ Valor Total $Neto Exento $Cod. SII Cred. E.C. $\nBoleta Afecta Electrónica (Resumida)\n562,868\n106,945 669,813Total Boleta Afecta Electrónica [ 35 ] 0\n0\nFactura Electrónica (Resumida)\n236,499,356\n44,934,940 281,434,296Total Facturas Electrónicas [ 1464 ] 0\n0\nTotal Ventas\n237,062,224\n45,041,885 282,104,1090\n0\n0.00\n(») En el Libro de Venta no se informan los documentos generados por Productos No Imprimibles.\n(BF) indica boleta emitida por impresora fiscal",
+    "period_start": "2026-07-01",
+    "period_end": "2026-10-31",
+    "net_clp": 237062224,
+    "vat_clp": 45041885,
+    "total_clp": 282104109,
+    "invoices": 1464,
+    "receipts": 35
+  },
+  "stock": {
+    "file": "EXISTENCIAS PROMEDIO.pdf",
+    "pages": 154,
+    "first_page": "REGISTRO DE EXISTENCIAS\nGB Ingenieria en Fijaciones S.A.\nImport., Exportacion y Comercializacion\nCamino Punta Mocha 5103\nHuechuraba\nSantiago\n99.530.740-5\nFecha de emisión :\nPágina                         1\nRango de fechas :\nFecha Folio\n[Físico - BODEGA (08 = ingefix temuco)]\n16/11/2026\n01/10/2026 AL 30/11/2026\nEntrada Salida SaldoOrigen / Destino Nro. Docto . Fecha  DoctoDocto. TransacciónBodega\nItem : [ 1ABFEGCO1020000 ]  [ GRATA COPA ONDULADA 4 AKI (ESM 7) ]     U/medida : [ UN ] 22.00Saldo Anterior (Físico) = \n28/10/2026 EMPRESA CONSTRUCTORA MOLLER Y PEREZ COTAPOS S.A. 0.00 20.00 2.00Guía[ST]01-Despacho por Facturar 2051482\n20.000.00Total Producto: 2.00\nTotal disponible\nTotal en reserva\nTotal en consignación\nTotal en transitoria\n2.00\n0.00\n0.00\n0.00\n2.00Total físico producto [ 1ABFEGCO1020000 ]\nResumen\nItem : [ 1ABFEGCO7500000 ]  [ GRATA COPA ONDULADA 3 AKI (ESM 4-1/2) ]     U/medida : [ UN ] 44.00Saldo Anterior (Físico) = \n13/10/2026 SOCIEDAD DE ARRIENDO DE MAQUINARIA Y EQUIPO RMAQ LIMITADA0.00 1.00 43.00Factura[FT]01-Desde Bodega Base a Cliente 586747 01\n21/10/2026 SOCIEDAD DE ARRIENDO DE MAQUINARIA Y EQUIPO RMAQ LIMITADA0.00 1.00 42.00Factura[FT]01-Desde Bodega Base a Cliente 587872 01\n2.000.00Total Producto: 42.00\nTotal disponible\nTotal en reserva\nTotal en consignación\nTotal en transitoria\n42.00\n0.00\n0.00\n0.00\n42.00Total físico producto [ 1ABFEGCO7500000 ]\nResumen\nItem : [ 1ABFEGCT1020000 ]  [ GRATA COPA TRENZADA 4 AKI (ESM 7) ]     U/medida : [ UN ] 60.00Saldo Anterior (Físico) = \n06/10/2026 EMPRESA CONSTRUCTORA MOLLER Y PEREZ COTAPOS S.A. 0.00 20.00 40.00Guía[ST]01-Despacho por Facturar 2033696\n21/10/2026 SOCIEDAD DE ARRIENDO DE MAQUINARIA Y EQUIPO RMAQ LIMITADA0.00 1.00 39.00Factura[FT]01-Desde Bodega Base a Cliente 587872 02\n03/11/2026 EBCO S.A.. 0.00 10.00 29.00 Guía[ST]01-Despacho por Facturar 2057158\n31.000.00Total Producto: 29.00\nTotal disponible\nTotal en reserva\nTotal en consignación\nTotal en transitoria\n29.00\n0.00\n0.00\n0.00\n29.00Total físico producto [ 1ABFEGCT1020000 ]\nResumen\nItem : [ 1ABFEGCT7500000 ]  [ GRATA COPA TRENZADA 3 AKI (ESM 4-1/2) ]     U/medida : [ UN ] 54.00Saldo Anterior (Físico) = \n06/10/2026 CLIENTE NO HABITUAL TEMUCO 0.00 2.00 52.00Boleta[BT]01-Venta con Boleta a Clientes Habituales 77032 01\n08/10/2026 CONSTRUCTORA CARRAN S.A. 0.00 25.00 27.00Guía[ST]01-Despacho por Facturar 2036081\n23/10/2026 CONSTRUCTORA HC SPA 0.00 5.00 22.00Guía[ST]01-Despacho por Facturar 2048141"
+  },
+  "observations": [
+    {
+      "file": "image (3).png",
+      "title": "Pedidos vendidos y despachos pendientes",
+      "finding": "La planilla distingue solicitado, pendiente y entregado por producto y nota de venta. Sirve para definir compromisos; una captura no es una sincronización de reservas.",
+      "action": "Al escanear un producto, consultar su saldo, su ubicación y confirmar cantidad antes de comprometerlo."
+    },
+    {
+      "file": "image (4).png",
+      "title": "Abastecimiento Santiago → Temuco",
+      "finding": "La captura registra recepciones parciales y observaciones como recepción sin guía o sin recepción. Los campos de stock y promedio muestran #N/A.",
+      "action": "Separar cantidad solicitada, cantidad recibida y documento. No convertir #N/A en cero ni asumir que una solicitud está en tránsito."
+    }
+  ]
+}
