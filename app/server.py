@@ -30,7 +30,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'integration'))
 import config as integration_config
 
 ROOT = Path(__file__).resolve().parents[1]
-DB = ROOT/'data'/'ingefix.db'
+DB = Path(os.environ.get('INGEFIX_DB_PATH',ROOT/'data'/'ingefix.db'))
 LOCK = threading.RLock()
 ACCESS_CODE = None
 WAREHOUSE_CODE = None
@@ -354,8 +354,12 @@ class Handler(BaseHTTPRequestHandler):
     def valid_host(self):
         host=self.headers.get('Host','').split(':')[0]
         if host=='localhost':return True
+        if host.lower().endswith('.trycloudflare.com'):return True
         try:return ipaddress.ip_address(host).is_private or ipaddress.ip_address(host).is_loopback
         except ValueError:return False
+    def expected_origin(self):
+        host=self.headers.get('Host','')
+        return ('https://' if host.lower().endswith('.trycloudflare.com') else 'http://')+host
     def send(self,status,data,kind='application/json; charset=utf-8'):
         content=json.dumps(data,ensure_ascii=False,allow_nan=False).encode() if kind.startswith('application/json') else data
         self.send_response(status)
@@ -410,7 +414,7 @@ class Handler(BaseHTTPRequestHandler):
         # API local sin cookies ni CORS. JSON obligatorio bloquea POST simple desde otros sitios.
         if self.headers.get('Content-Type','').split(';')[0]!='application/json':return self.send(415,dict(error='Solo application/json'))
         origin=self.headers.get('Origin')
-        if origin and origin!=f'http://{self.headers.get("Host")}':return self.send(403,dict(error='Origen no permitido'))
+        if origin and origin!=self.expected_origin():return self.send(403,dict(error='Origen no permitido'))
         try:
             length=int(self.headers.get('Content-Length','0'))
             if length<=0 or length>6_000_000:raise ValueError('Tamaño de petición no permitido')
@@ -451,9 +455,12 @@ def main():
     global ACCESS_CODE,WAREHOUSE_CODE
     parser=argparse.ArgumentParser(description='INGEFIX · Prototipo logístico local')
     parser.add_argument('--port',type=int,default=8765)
+    parser.add_argument('--host',default=os.environ.get('HOST','127.0.0.1'))
     parser.add_argument('--no-browser',action='store_true')
     parser.add_argument('--lan',action='store_true',help='Piloto en red local con código de acceso temporal')
+    parser.add_argument('--public-demo',action='store_true',help='Demostración pública sin código de acceso')
     args=parser.parse_args()
+    if args.public_demo:ACCESS_CODE=None;WAREHOUSE_CODE=None
     (ROOT/'data').mkdir(exist_ok=True)
     logging.basicConfig(filename=ROOT/'data'/'server.log',level=logging.ERROR,format='%(asctime)s %(levelname)s %(message)s',encoding='utf-8')
     initialize()
@@ -463,7 +470,7 @@ def main():
     for candidate_port in range(args.port,args.port+12):
         url=f'http://127.0.0.1:{candidate_port}'
         try:
-            server=InventoryHTTPServer(('0.0.0.0' if args.lan else '127.0.0.1',candidate_port),Handler)
+            server=InventoryHTTPServer(('0.0.0.0' if args.lan else args.host,candidate_port),Handler)
             args.port=candidate_port
             break
         except OSError:
@@ -493,6 +500,7 @@ def main():
     threading.Thread(target=sync_loop,daemon=True).start()
     if args.lan:
         addresses=sorted({a[4][0] for a in socket.getaddrinfo(socket.gethostname(),None,socket.AF_INET) if not a[4][0].startswith('127.')})
+        (ROOT/'data'/'public-access-codes.txt').write_text('CÃ³digo administrador: '+str(ACCESS_CODE)+'\nCÃ³digo exclusivo de bodega: '+str(WAREHOUSE_CODE)+'\n',encoding='utf-8')
         print('Piloto LAN · mismo Wi-Fi/red. No exponer este puerto a Internet.',flush=True)
         for address in addresses:print(f'Telefono: http://{address}:{args.port}',flush=True)
         print(f'Codigo administrador: {ACCESS_CODE}',flush=True)
