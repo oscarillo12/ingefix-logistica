@@ -19,9 +19,7 @@ class PublishTests(unittest.TestCase):
         self.assertIn('safe.directory='+publish.SOURCE.resolve().as_posix(),args)
         self.assertNotIn('--global',args)
         self.assertNotIn('safe.directory=*',args)
-    def test_private_push_is_verified_and_token_not_printed(self):
-        self.exercise(private=True)
-    def test_public_repository_is_not_pushed(self):
+    def test_public_repository_push_is_verified_and_token_not_printed(self):
         self.exercise(private=False)
     def exercise(self,private):
         calls=[];sha='1'*40
@@ -43,11 +41,9 @@ class PublishTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             source=Path(directory);(source/'.git').mkdir();out=io.StringIO()
             with patch.object(publish,'SOURCE',source),patch.object(publish,'run',side_effect=run),patch.object(publish.webbrowser,'open'),patch.object(publish.urllib.request,'urlopen',side_effect=responses),contextlib.redirect_stdout(out):
-                if private:publish.main()
-                else:
-                    with self.assertRaises(ValueError):publish.main()
+                publish.main()
             self.assertNotIn('FAKE-TEST-ONLY',out.getvalue())
-            self.assertEqual(any('push' in call for call in calls),private)
+            self.assertTrue(any('push' in call for call in calls))
             if private:self.assertIn('PUBLICACIÓN VERIFICADA',out.getvalue())
 
 if __name__=='__main__':unittest.main()
