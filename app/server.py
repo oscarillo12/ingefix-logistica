@@ -361,7 +361,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         for k,v in [('Content-Type',kind),('Content-Length',str(len(content))),('Cache-Control','no-store'),
                     ('X-Content-Type-Options','nosniff'),('Referrer-Policy','same-origin'),
-                    ('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'")]:self.send_header(k,v)
+                    ('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'self'")]:self.send_header(k,v)
         self.end_headers();self.wfile.write(content)
     def do_GET(self):
         if not self.valid_host():return self.send(403,dict(error='Host no permitido'))

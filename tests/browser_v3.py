@@ -21,11 +21,17 @@ def main():
                 browser=pw.chromium.launch(headless=True,**({'executable_path':str(installed[-1])} if installed else {}))
                 page=browser.new_page(viewport={'width':1440,'height':1000});page.add_init_script("localStorage.setItem('ingefix-tour-v3','done')")
                 errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-                page.goto(url);page.locator('.abc-cards').wait_for()
-                page.locator('[data-action=start-tour]').click();page.locator('.tutorial-content').wait_for()
+                page.goto(url);page.locator('.operator-next').wait_for()
+                assert page.locator('.operator-fixed-help>div').count()==3
+                page.locator('[data-action=start-tour]').click();page.locator('.journey-main').wait_for()
+                assert page.locator('.journey-node').count()==5
                 page.screenshot(path=str(root/'artifacts'/'tutorial-v3.png'),full_page=True)
-                for _ in range(7):page.locator('[data-action=tour-next]').click()
-                page.locator('[data-action=tour-finish]').click();page.locator('#modal').wait_for(state='hidden')
+                page.locator('[data-action=phone-preview]').first.click()
+                page.frame_locator('iframe').locator('.warehouse-one-task').wait_for()
+                assert page.frame_locator('iframe').locator('video#scan-video').count()==1
+                page.screenshot(path=str(root/'artifacts'/'vista-telefono.png'))
+                page.locator('[data-action=close-modal]').click()
+                assert 'phone-preview-modal' not in page.locator('#modal').get_attribute('class')
                 page.locator('#nav [data-page=receipts]').click();page.locator('[data-action=new-inbound]').click()
                 page.locator('#inbound-form [name=code]').select_option('2ABFESS11510M00')
                 page.locator('#inbound-form [name=source_doc]').fill('SOL-QA');page.locator('#inbound-form [name=expected]').fill('10')
@@ -54,9 +60,21 @@ def main():
                 mobile=browser.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True);mobile.add_init_script("localStorage.setItem('ingefix-tour-v3','done')")
                 mobile.goto(url+'/bodega');mobile.locator('.warehouse-header').wait_for()
                 assert mobile.locator('.sidebar').is_hidden();assert mobile.locator('.shell>header').is_hidden()
-                assert mobile.locator('.warehouse-notices').inner_text().find('DISCO CORTE')!=-1
+                assert mobile.locator('.warehouse-one-task').inner_text().find('DISCO CORTE')!=-1
+                assert mobile.locator('.warehouse-mini-steps>span').count()==3
+                assert mobile.locator('video#scan-video').count()==1
                 mobile.screenshot(path=str(root/'artifacts'/'bodega-v3-qa.png'),full_page=True)
                 assert mobile.evaluate('document.documentElement.scrollWidth<=innerWidth')
+                assert mobile.request.post(url+'/api/locations',data={'code':'2ABFESS11510M00','location':'TCO-QA-R01-N01'}).ok
+                mobile.reload();mobile.locator('.warehouse-one-task').wait_for()
+                mobile.locator('.warehouse-manual summary').click()
+                mobile.locator('#scan-code').fill('2ABFESS11510M00');mobile.locator('#scan-form button').click()
+                mobile.locator('#scan-result [data-action=count]').click()
+                mobile.locator('#count-form [name=quantity]').fill('0');mobile.locator('#count-form [name=operator]').fill('QA temporal')
+                assert mobile.locator('#count-form select').count()==0
+                mobile.locator('#count-form [type=submit]').click();mobile.locator('#modal').wait_for(state='hidden')
+                saved=mobile.request.get(url+'/api/state').json()['counts']
+                assert any(c['code']=='2ABFESS11510M00' and c['quantity']==0 for c in saved)
                 # Roles autenticados de bodega: permiso de conteo, bloqueo de configuración/documentos.
                 server.ACCESS_CODE='ADMIN-QA';server.WAREHOUSE_CODE='BODEGA-QA'
                 guest=browser.new_context(viewport={'width':390,'height':844});wh=guest.new_page();wh.add_init_script("localStorage.setItem('ingefix-tour-v3','done')")
@@ -65,6 +83,6 @@ def main():
                 assert wh.request.get(url+'/api/source?name=VENTAS%20PROMEDIO.pdf').status==403
                 assert wh.request.get(url+'/api/state').json()['session_role']=='warehouse'
                 assert not errors,errors
-                browser.close();print(json.dumps(dict(passed=True,tutorial_steps=8,partial_receipt=True,credit_import_return=True,models=3,warehouse_permissions=True,js_errors=errors)))
+                browser.close();print(json.dumps(dict(passed=True,workflow_steps=5,fixed_help=True,phone_preview=True,partial_receipt=True,credit_import_return=True,models=3,warehouse_permissions=True,js_errors=errors)))
         finally:http.shutdown();http.server_close();thread.join();server.DB=previous;server.ACCESS_CODE=None;server.WAREHOUSE_CODE=None;server.SESSIONS.clear()
 if __name__=='__main__':main()

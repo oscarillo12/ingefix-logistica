@@ -52,6 +52,16 @@ Comprobar conexión valida la lectura sin guardar documentos. Sincronizar confir
 
 El conector está implementado y probado con contratos controlados, pero **no se ha conectado al servidor real de INGEFIX**: falta versión, acceso autorizado, driver y mapeo de vistas por TI. El software informa ese estado; no simula una lectura exitosa.
 
+## Uso sencillo para el operador
+
+El inicio «Qué hago ahora» propone una tarea y permite desplegar los indicadores del encargado. «Cómo se conecta todo» muestra el recorrido: pedido por entregar → conteo físico → solicitud de reposición → recepción → comprobación con Softland. Cada pantalla incluye tres ayudas pequeñas y fijas.
+
+«Pedidos por preparar» sirve para detectar faltantes antes de armar un pedido. Se ingresa producto, cantidad pendiente y fecha real de entrega. Los pedidos dentro de los próximos siete días priorizan el conteo en bodega; no descuentan por segunda vez el inventario reservado en Softland.
+
+El botón «Vista del teléfono» abre la aplicación de bodega dentro de una ventana. Es una vista real: guardar un conteo allí también lo registra. En el teléfono se ve una tarea, el motivo en lenguaje cotidiano, la ubicación y el escáner con vista previa. Después de leer la etiqueta se pide cantidad observada y responsable. Las observaciones son opcionales. No se muestran saldos antes de contar.
+
+Las tareas se actualizan cada treinta segundos mientras la pantalla está abierta. La lectura en vivo depende del permiso de cámara y de HTTPS en el teléfono; se puede usar una foto o un lector de mano. No hay notificaciones con el navegador cerrado.
+
 ## Datos privados y GitHub
 
 El paquete de entrega local incluye las fuentes de la empresa. La carpeta preparada para GitHub excluye documentos originales, SQLite, historial extraído, exportaciones, configuración local y registros. Un clon sin datos inicia vacío y permite importar el maestro real. Se recomienda repositorio privado. No almacenar credenciales ni publicar documentos de clientes.
