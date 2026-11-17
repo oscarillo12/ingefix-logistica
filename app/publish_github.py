@@ -45,13 +45,16 @@ def main():
     approved_data={'data/seed.json','data/evidence.json','data/ledger.json'}
     forbidden=[p for p in files if (p.startswith('data/') and p not in approved_data) or Path(p).suffix.lower() in ('.pdf','.xlsx','.db','.log','.env') or p.endswith('.local.json')]
     if forbidden:raise ValueError('Se detectaron archivos operativos en la selección. Se detiene la publicación para revisarlos.')
-    print('PASO 1/3: Autorizar GitHub con oscarillo12.',flush=True)
-    print('Se abrira https://github.com/login/device. Git mostrara aqui un codigo temporal.',flush=True)
-    print('Introduce ese codigo en GitHub y completa la autorizacion. Mantén esta ventana abierta.',flush=True)
-    webbrowser.open('https://github.com/login/device')
-    run(['git','credential-manager','github','login','--username',OWNER,'--device','--no-ui'],env=env)
     env['GCM_INTERACTIVE']='never';env['GIT_TERMINAL_PROMPT']='0'
-    credential=run(['git','credential','fill'],input=f'protocol=https\nhost=github.com\nusername={OWNER}\n\n',capture_output=True,text=True,env=env)
+    request=f'protocol=https\nhost=github.com\nusername={OWNER}\n\n'
+    # Consulta primero la sesión de Windows; solo inicia el flujo de dispositivo si no hay credencial guardada.
+    credential=subprocess.run(['git','-C',str(SOURCE),'-c','safe.directory='+SOURCE.resolve().as_posix(),'-c','credential.credentialStore=dpapi','-c','credential.dpapiStorePath='+str(AUTH_STORE),'credential','fill'],input=request,capture_output=True,text=True,env=env)
+    if credential.returncode or not any(line.startswith('password=') for line in credential.stdout.splitlines()):
+        print('Se necesita autorizar GitHub. El código temporal aparecerá en esta ventana negra.',flush=True)
+        print('Abre https://github.com/login/device y escribe ahí el código que aparece aquí.',flush=True)
+        webbrowser.open('https://github.com/login/device')
+        run(['git','credential-manager','github','login','--username',OWNER,'--device','--no-ui'],env=env)
+        credential=subprocess.run(['git','-C',str(SOURCE),'-c','safe.directory='+SOURCE.resolve().as_posix(),'-c','credential.credentialStore=dpapi','-c','credential.dpapiStorePath='+str(AUTH_STORE),'credential','fill'],input=request,capture_output=True,text=True,env=env,check=True)
     values=dict(line.split('=',1) for line in credential.stdout.splitlines() if '=' in line)
     token=values.get('password')
     if not token:raise ValueError('Git no devolvió una autorización utilizable. No se ha subido el código.')
