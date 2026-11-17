@@ -1,0 +1,2 @@
+'use strict';
+document.querySelector('#login-form').addEventListener('submit',async e=>{e.preventDefault();const form=e.target,button=form.querySelector('button');button.disabled=true;try{const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:form.elements.code.value})});const b=await r.json();if(!r.ok)throw Error(b.error);location.reload()}catch(err){form.querySelector('.form-error').textContent=err.message}finally{button.disabled=false}});

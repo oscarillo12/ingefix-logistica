@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+data/*.db
+data/*.db-*
+.env
+*.log
+artifacts/
+data/*.json
+data/*.csv
+data/*.tmp
+/*.pdf
+/*.png
+/*.xlsx
+/*.zip
+/*.url
+INGEFIX-prototipo/
+github-source/

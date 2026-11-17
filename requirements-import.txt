@@ -1,0 +1,4 @@
+# Solo para regenerar data/seed.json a partir de los PDF originales.
+pypdf>=6,<7
+# La aplicación y la lectura de XLSX utilizan la biblioteca estándar de Python.
+# Para la opción SQL Server del puente, instalar pyodbc aparte según el entorno de TI.
