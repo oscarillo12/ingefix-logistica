@@ -24,6 +24,15 @@ RESULT_FILE=ROOT/'data'/'publicacion-github.txt'
 def run(args,**kwargs):
     if args and args[0]=='git':
         args=['git','-c','credential.credentialStore=dpapi','-c','credential.dpapiStorePath='+str(AUTH_STORE),*args[1:]]
+    if 'credential-manager' in args and 'login' in args:
+        process=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',env=kwargs.get('env'))
+        failures=[]
+        for line in process.stdout:
+            print(line,end='',flush=True)
+            if line.lstrip().lower().startswith('fatal:'):failures.append(line.strip())
+        code=process.wait()
+        if code:raise subprocess.CalledProcessError(code,args,stderr='\n'.join(failures))
+        return subprocess.CompletedProcess(args,code)
     return subprocess.run(args,check=True,**kwargs)
 
 def main():
@@ -74,7 +83,7 @@ def execute():
         result=f'PUBLICACION VERIFICADA\nhttps://github.com/{OWNER}/{NAME}\n'
         status=0
     except (ValueError,OSError,subprocess.CalledProcessError,urllib.error.URLError) as error:
-        if isinstance(error,subprocess.CalledProcessError):message='Git no completo la operacion. Revisa el mensaje que aparece antes de este aviso. Si indica socket, red o plataforma no permitida, ejecuta SUBIR_GITHUB.bat desde el Explorador de Windows, fuera de ChatGPT/Codex.'
+        if isinstance(error,subprocess.CalledProcessError):message='Git no completo la operacion. '+(error.stderr or '')+'\nSi indica socket, red o plataforma no permitida, ejecuta SUBIR_GITHUB.bat desde el Explorador de Windows, fuera de ChatGPT/Codex.'
         elif isinstance(error,urllib.error.HTTPError):message=f'GitHub respondio HTTP {error.code}. Revisa permisos o conectividad.'
         elif isinstance(error,urllib.error.URLError):message='No se pudo conectar con GitHub. Ejecuta el iniciador desde Windows con acceso a Internet.'
         else:message=str(error)
