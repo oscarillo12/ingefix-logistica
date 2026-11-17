@@ -12,6 +12,13 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'app'))
 import publish_github as publish
 
 class PublishTests(unittest.TestCase):
+    def test_git_trust_is_scoped_to_prepared_directory(self):
+        with patch.object(publish.subprocess,'run',return_value=subprocess.CompletedProcess([],0,stdout='')) as process:
+            publish.run(['git','status'],capture_output=True,text=True)
+        args=process.call_args.args[0]
+        self.assertIn('safe.directory='+publish.SOURCE.resolve().as_posix(),args)
+        self.assertNotIn('--global',args)
+        self.assertNotIn('safe.directory=*',args)
     def test_private_push_is_verified_and_token_not_printed(self):
         self.exercise(private=True)
     def test_public_repository_is_not_pushed(self):

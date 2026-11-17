@@ -23,7 +23,7 @@ RESULT_FILE=ROOT/'data'/'publicacion-github.txt'
 
 def run(args,**kwargs):
     if args and args[0]=='git':
-        args=['git','-c','credential.credentialStore=dpapi','-c','credential.dpapiStorePath='+str(AUTH_STORE),*args[1:]]
+        args=['git','-c','safe.directory='+SOURCE.resolve().as_posix(),'-c','credential.credentialStore=dpapi','-c','credential.dpapiStorePath='+str(AUTH_STORE),*args[1:]]
     if 'credential-manager' in args and 'login' in args:
         process=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',env=kwargs.get('env'))
         failures=[]
@@ -91,9 +91,6 @@ def execute():
         print('\n'+result,flush=True);status=1
     RESULT_FILE.parent.mkdir(exist_ok=True)
     RESULT_FILE.write_text(datetime.now().isoformat()+'\n'+result,encoding='utf-8')
-    if status:
-        try:os.startfile(str(RESULT_FILE))
-        except OSError:pass
     return status
 
 if __name__=='__main__':
