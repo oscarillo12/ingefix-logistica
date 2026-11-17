@@ -408,7 +408,9 @@ class Handler(BaseHTTPRequestHandler):
         if path in ('/','/bodega'):path='/index.html'
         file=(ROOT/'app'/'static'/path.lstrip('/')).resolve()
         if not file.is_relative_to((ROOT/'app'/'static').resolve()) or not file.is_file():return self.send(404,dict(error='No encontrado'))
-        self.send(200,file.read_bytes(),mimetypes.guess_type(file.name)[0] or 'application/octet-stream')
+        kind=mimetypes.guess_type(file.name)[0] or 'application/octet-stream'
+        if kind.startswith(('text/','application/javascript','image/svg+xml')) and 'charset=' not in kind:kind+='; charset=utf-8'
+        self.send(200,file.read_bytes(),kind)
     def do_POST(self):
         if not self.valid_host():return self.send(403,dict(error='Host no permitido'))
         # API local sin cookies ni CORS. JSON obligatorio bloquea POST simple desde otros sitios.
