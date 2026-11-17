@@ -502,7 +502,7 @@ def main():
     threading.Thread(target=sync_loop,daemon=True).start()
     if args.lan:
         addresses=sorted({a[4][0] for a in socket.getaddrinfo(socket.gethostname(),None,socket.AF_INET) if not a[4][0].startswith('127.')})
-        (ROOT/'data'/'public-access-codes.txt').write_text('CÃ³digo administrador: '+str(ACCESS_CODE)+'\nCÃ³digo exclusivo de bodega: '+str(WAREHOUSE_CODE)+'\n',encoding='utf-8')
+        (ROOT/'data'/'public-access-codes.txt').write_text('Código administrador: '+str(ACCESS_CODE)+'\nCódigo exclusivo de bodega: '+str(WAREHOUSE_CODE)+'\n',encoding='utf-8')
         print('Piloto LAN · mismo Wi-Fi/red. No exponer este puerto a Internet.',flush=True)
         for address in addresses:print(f'Telefono: http://{address}:{args.port}',flush=True)
         print(f'Codigo administrador: {ACCESS_CODE}',flush=True)
