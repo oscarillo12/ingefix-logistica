@@ -47,6 +47,6 @@ const nav=$('#nav');
 nav.querySelector('[data-page="inventory"]').insertAdjacentHTML('beforebegin','<button data-page="abc"><span>◴</span> Clasificador ABC</button>');
 nav.querySelector('[data-page="counts"]').insertAdjacentHTML('afterend','<button data-page="labels"><span>▧</span> Etiquetas por producto</button><button data-page="scan"><span>▥</span> Escanear y contar</button>');
 nav.querySelector('[data-page="research"]').insertAdjacentHTML('beforebegin','<button data-page="documents"><span>▤</span> Documentos INGEFIX</button>');
-$('.version').textContent='v0.2';
+const versionLabel=$('.version');if(versionLabel)versionLabel.textContent='v0.2';
 if(labels[location.hash.slice(1)])page=location.hash.slice(1);
 if(S)render();
