@@ -35,7 +35,7 @@ class PublishTests(unittest.TestCase):
         responses=[Response({'login':'oscarillo12'}),Response({'private':private,'html_url':'https://github.com/oscarillo12/ingefix-logistica'})]
         with tempfile.TemporaryDirectory() as directory:
             source=Path(directory);(source/'.git').mkdir();out=io.StringIO()
-            with patch.object(publish,'SOURCE',source),patch.object(publish,'run',side_effect=run),patch.object(publish.urllib.request,'urlopen',side_effect=responses),contextlib.redirect_stdout(out):
+            with patch.object(publish,'SOURCE',source),patch.object(publish,'run',side_effect=run),patch.object(publish.webbrowser,'open'),patch.object(publish.urllib.request,'urlopen',side_effect=responses),contextlib.redirect_stdout(out):
                 if private:publish.main()
                 else:
                     with self.assertRaises(ValueError):publish.main()

@@ -15,3 +15,5 @@ data/*.tmp
 /*.url
 INGEFIX-prototipo/
 github-source/
+data/github-auth/
+data/publicacion-github.txt
