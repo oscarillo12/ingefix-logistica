@@ -61,5 +61,7 @@ jobs:
 ''',encoding='utf-8')
 with zipfile.ZipFile(root/'INGEFIX-codigo-github.zip','w',zipfile.ZIP_DEFLATED) as archive:
     for path in target.rglob('*'):
-        if path.is_file() and '.git' not in path.relative_to(target).parts and '__pycache__' not in path.parts:archive.write(path,path.relative_to(target))
+        rel=path.relative_to(target)
+        approved=rel.parts[0] in ('app','integration','tests','docs','.github') or len(rel.parts)==1 and rel.name in ('README.md','.gitignore','INICIAR.bat','INICIAR_MOVIL.bat','requirements-import.txt')
+        if path.is_file() and approved and '__pycache__' not in path.parts and path.suffix not in ('.db','.log','.pyc'):archive.write(path,rel)
 print('Código preparado en github-source; datos privados excluidos.')
