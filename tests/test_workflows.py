@@ -34,6 +34,13 @@ class WorkflowTests(unittest.TestCase):
         text=text.replace('no_stock','return');self.load('credits',text)
         self.receive('NC-QA','return',5,4)
         self.assertEqual(server.state(self.db)['workflows']['credits'][0]['good'],4)
+        with self.assertRaises(ValueError):self.call('/api/credit-classify',dict(id='NC-QA',inventory_effect='no_stock',operator='QA',explanation='No puede reclasificarse después de recibir'))
+    def test_document_reference_can_resolve_missing_guide(self):
+        r=self.call('/api/inbound',dict(code=self.code,expected=1,source_doc='SOL-QA'))
+        e=self.call('/api/physical-events',dict(parent_id=r['id'],kind='receipt',quantity=1,good=1,request_id=str(uuid.uuid4()),operator='QA',document=''))
+        self.assertEqual(server.state(self.db)['workflows']['inbound'][0]['without_document'],1)
+        self.call('/api/event-document',dict(id=e['id'],document='GUIA-QA',operator='QA'))
+        self.assertEqual(server.state(self.db)['workflows']['inbound'][0]['without_document'],0)
     def test_conciliation_requires_matching_real_import_and_does_not_add_stock(self):
         r=self.call('/api/inbound',dict(code=self.code,expected=3,source_doc='SOL-QA'));e=self.receive(r['id'],qty=3,good=2)
         self.load('movements',f'id,code,day,entry,exit,document\nMOV-QA,{self.code},{date.today()},2,0,GUIA-QA')

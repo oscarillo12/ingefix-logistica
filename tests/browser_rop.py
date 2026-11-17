@@ -16,6 +16,8 @@ def main():
     original=server.DB
     with tempfile.TemporaryDirectory() as tmp:
         server.DB=Path(tmp)/'rop-test.db';server.initialize()
+        with server.connect() as db:
+            db.execute('INSERT INTO products(code,name,warehouse,unit,location,snapshot_at,snapshot_version) VALUES(?,?,?,?,?,?,?)',('QA-NODATA','Producto de prueba sin historia','08','UN','','','qa'))
         http=server.InventoryHTTPServer(('127.0.0.1',0),server.Handler)
         thread=threading.Thread(target=http.serve_forever,daemon=True);thread.start()
         url=f'http://127.0.0.1:{http.server_port}'
@@ -58,7 +60,7 @@ def main():
                 page.locator('#rop-product').select_option('TOVOPF612500000')
                 assert page.locator('.rop-formula-total strong').inner_text()!=expected['total']
                 # Un SKU sin salidas no recibe un ROP de otro producto.
-                page.locator('#rop-product').select_option('1PDSICOBIME0200')
+                page.locator('#rop-product').select_option('QA-NODATA')
                 assert page.locator('.rop-cycle-chart').count()==0
                 page.set_viewport_size({'width':390,'height':844})
                 page.locator('#rop-product').select_option('2ABFESS11510M00')
