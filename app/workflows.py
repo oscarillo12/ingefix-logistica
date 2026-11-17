@@ -54,6 +54,8 @@ def read_state(db,products):
             reasons.append(f"Clase {p['abc']}: prioridad alta por movimiento y cercanía al ROP")
         elif p.get('count_alert'):
             reasons.append(f"Clase {p['abc']}: conteo preventivo por cercanía al ROP")
+        elif p.get('due') and p['abc'] in ('A','B'):
+            reasons.append(f"Conteo cÃ­clico clase {p['abc']} vencido: producto de alta rotaciÃ³n, cada {p['count_interval']} dÃ­as")
         elif p['abc']=='A':reasons.append('Clase A: concentra movimiento y conviene verificarla con mayor frecuencia')
         p['task_reasons']=reasons
         p['wms_alert']=bool(p['rop'] is not None and p['position'] is not None and p['position']<=p['rop'])

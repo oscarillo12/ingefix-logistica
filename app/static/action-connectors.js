@@ -70,8 +70,11 @@ function renderRopNextStep() {
     message = 'Todavía no hay productos cargados para calcular reposición.';
     action = '<button class="btn small primary" data-go="integration">Cargar productos</button>';
   } else if (!ready.length) {
-    message = 'Aún no se puede calcular el ROP. Faltan datos confirmados de demanda, plazo o colchón.';
-    action = '<button class="btn small primary" data-go="integration">Completar datos</button>';
+    const history = products.filter(product => product.forecast?.last_day || product.daily != null).length;
+    message = history
+      ? `Hay historial de salidas para ${history} producto(s), pero no un plazo Santiago–Temuco y colchón confirmados. Por eso el ROP queda pendiente, no en cero. Completa esos datos para calcular umbrales reales.`
+      : 'Aún no hay demanda válida por producto. Importa el historial o confirma el período real del reporte, además del plazo y colchón.';
+    action = '<button class="btn small primary" data-go="integration">Completar parámetros</button>';
   } else if (firstCount) {
     message = `${firstCount.name} es el siguiente producto que debe verificarse físicamente. ${firstCount.wms_alert ? 'Ya llegó al punto de pedido.' : 'Se acerca al punto de pedido.'} A y B se priorizan por su movimiento.`;
     action = `<button class="btn small primary" data-action="count" data-code="${esc(firstCount.code)}">Contar este producto</button>`;
@@ -86,6 +89,10 @@ function renderRopNextStep() {
 }
 render = function () {
   renderBeforeActionConnectors();
+  if (!warehouseMode && page === 'overview') {
+    const actions = document.querySelector('#page .page-top .actions');
+    if (actions && !actions.querySelector('[data-action="open-labels"]')) actions.insertAdjacentHTML('afterbegin', '<button class="btn small" data-action="open-labels">▧ Etiquetas WMS</button>');
+  }
   if (page === 'replenish') {
     const pageTop = document.querySelector('#page .page-top');
     if (pageTop && !document.querySelector('#page .rop-next-step')) pageTop.insertAdjacentHTML('afterend', renderRopNextStep());
