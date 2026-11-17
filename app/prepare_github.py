@@ -11,6 +11,7 @@ for folder in ('app','integration','tests'):
         destination=target/source.relative_to(root);destination.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,destination)
 for name in ('INICIAR.bat','INICIAR_MOVIL.bat','.gitignore','requirements-import.txt'):
     shutil.copy2(root/name,target/name)
+shutil.copy2(root/'render.yaml',target/'render.yaml')
 for name in ('seed.json','evidence.json','ledger.json'):
     if (root/'data'/name).is_file():
         (target/'data').mkdir(exist_ok=True);shutil.copy2(root/'data'/name,target/'data'/name)

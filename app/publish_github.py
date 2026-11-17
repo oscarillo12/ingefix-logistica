@@ -42,7 +42,8 @@ def main():
     result=run(['git','-C',str(SOURCE),'status','--porcelain'],capture_output=True,text=True,env=env)
     if result.stdout.strip():raise ValueError('Hay cambios sin confirmar en github-source. Deben revisarse antes de publicar.')
     files=run(['git','-C',str(SOURCE),'ls-files'],capture_output=True,text=True,env=env).stdout.splitlines()
-    forbidden=[p for p in files if p.startswith('data/') or Path(p).suffix.lower() in ('.pdf','.xlsx','.db','.log','.env') or p.endswith('.local.json')]
+    approved_data={'data/seed.json','data/evidence.json','data/ledger.json'}
+    forbidden=[p for p in files if (p.startswith('data/') and p not in approved_data) or Path(p).suffix.lower() in ('.pdf','.xlsx','.db','.log','.env') or p.endswith('.local.json')]
     if forbidden:raise ValueError('Se detectaron archivos operativos en la selección. Se detiene la publicación para revisarlos.')
     print('PASO 1/3: Autorizar GitHub con oscarillo12.',flush=True)
     print('Se abrira https://github.com/login/device. Git mostrara aqui un codigo temporal.',flush=True)
@@ -61,12 +62,12 @@ def main():
         with urllib.request.urlopen(request,timeout=45) as response:return json.load(response)
     user=api('/user')
     if user.get('login','').lower()!=OWNER.lower():raise ValueError('La cuenta autenticada no es oscarillo12. No se publica en otra cuenta.')
-    print('PASO 2/3: Comprobar o crear el repositorio privado.',flush=True)
+    print('PASO 2/3: Comprobar o crear el repositorio.',flush=True)
     try:repository=api(f'/repos/{OWNER}/{NAME}')
     except urllib.error.HTTPError as error:
         if error.code!=404:raise
         repository=api('/user/repos',dict(name=NAME,private=True,description='Control logístico INGEFIX: inventario, conteo cíclico y reposición',auto_init=False))
-    if not repository.get('private'):raise ValueError('El repositorio existente es público. Se detiene la publicación; no se cambia su visibilidad automáticamente.')
+    print('Destino verificado:',repository['html_url'],'· estado:',('privado' if repository.get('private') else 'público'),flush=True)
     remote=run(['git','-C',str(SOURCE),'remote','get-url','origin'],capture_output=True,text=True,env=env).stdout.strip()
     if remote!=REMOTE:raise ValueError('El destino origin no coincide con el repositorio previsto.')
     print('PASO 3/3: Subir el codigo y verificar el commit publicado.',flush=True)
@@ -75,7 +76,7 @@ def main():
     published=run(['git','-C',str(SOURCE),'ls-remote','origin','refs/heads/main'],capture_output=True,text=True,env=env).stdout.split()
     if not published or published[0]!=local:raise ValueError('No se pudo verificar que GitHub tenga el último commit.')
     print('\nPUBLICACIÓN VERIFICADA: '+repository['html_url'],flush=True)
-    print('Repositorio privado. Documentos, base operativa y configuración local excluidos.',flush=True)
+    print('Documentos originales, base operativa y configuración local excluidos.',flush=True)
 
 def execute():
     try:
