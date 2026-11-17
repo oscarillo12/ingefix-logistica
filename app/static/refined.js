@@ -28,9 +28,11 @@ overview=function(){
  const pending=(S.counts||[]).filter(c=>c.status==='pendiente');
  const escN=x=>esc(String(x??''));
  const classData=['A','B','C'].map(k=>({key:k,items:ps.filter(p=>p.abc===k),share:ps.filter(p=>p.abc===k).reduce((n,p)=>n+(Number(p.share)||0),0)}));
- const countReady=ps.filter(p=>p.recommended_count).sort((a,b)=>({A:0,B:1,C:2}[a.abc]??3)-({A:0,B:1,C:2}[b.abc]??3));
+ const countReady=ps.filter(p=>p.recommended_count).sort((a,b)=>(b.priority||0)-(a.priority||0));
  const nextActions=[];
  if(alerts.length)nextActions.push({icon:'↗',title:'Preparar reposición',detail:`${alerts.length} producto(s) están en o bajo el ROP.`,label:'Crear borrador de pedido',action:'request',code:alerts[0].code});
+ const countAlerts=ps.filter(p=>p.recommended_count&&p.count_alert);
+ if(countAlerts.length)nextActions.push({icon:'ABC/ROP',title:'Confirmar físico antes del ROP',detail:`${countAlerts.length} producto(s) entraron en su umbral preventivo. A y B aparecen primero.`,label:'Abrir tareas de conteo',go:'counts'});
  if(missingStock.length)nextActions.push({icon:'⇄',title:'Completar saldos digitales',detail:`${missingStock.length} producto(s) no tienen saldo ERP cargado.`,label:'Importar saldos',action:'prepare-import',kind:'stock'});
  if(unclassified.length)nextActions.push({icon:'A/B/C',title:'Completar clasificación ABC',detail:`${unclassified.length} producto(s) no tienen salidas para clasificarse.`,label:'Cargar movimientos o demanda',action:'prepare-import',kind:'demand'});
  if(missingLocation.length)nextActions.push({icon:'⌖',title:'Asignar ubicaciones',detail:`${missingLocation.length} producto(s) no tienen ubicación registrada.`,label:'Asignar primera ubicación',action:'location',code:missingLocation[0].code});

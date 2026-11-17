@@ -90,6 +90,10 @@ def enrich(products, settings, counts, daily_rows, orders):
         stock = p['erp_stock']
         p['coverage'] = max(0,stock)/p['daily'] if stock is not None and p['daily'] else None
         p['position'] = stock+p['in_transit']-p['reserved'] if stock is not None else None
+        # Ventana anticipada para verificar f?sicamente antes de decidir una reposici?n:
+        # ROP m?s consumo durante el per?odo de revisi?n configurado para el piloto.
+        p['count_trigger'] = math.ceil(p['daily']*(settings['lead_days']+settings['review_days'])+p['safety']) if p['planning_ready'] else None
+        p['count_alert'] = bool(p['count_trigger'] is not None and p['position'] is not None and p['position'] <= p['count_trigger'])
         p['suggested'] = max(0, math.ceil(p['daily']*(settings['lead_days']+settings['review_days'])+p['safety']-p['position'])) if p['position'] is not None and p['planning_ready'] else None
         p['open_request'] = pending.get(p['code'], 0)
         p['risk'] = 'sin_saldo' if stock is None else 'quiebre' if p['position'] <= 0 else 'sin_politica' if p['rop'] is None else 'reponer' if p['position'] <= p['rop'] else 'estable'
@@ -97,4 +101,6 @@ def enrich(products, settings, counts, daily_rows, orders):
         p['due'] = not c or not p['count_matches_snapshot'] or (date.today()-date.fromisoformat(c['created_at'][:10])).days >= interval
         p['count_interval'] = interval
         p['priority'] = (100 if p['discrepancy'] else 0)+(50 if p['risk']=='quiebre' else 25 if p['risk']=='reponer' else 0)+({'A':20,'B':10,'C':0,'ND':0}[p['abc']])
+        if p['count_alert']:
+            p['priority'] += {'A':80,'B':60,'C':20,'ND':0}[p['abc']]
     return sorted(products, key=lambda p:(-p['priority'], -(p['outbound'] or 0), p['code']))

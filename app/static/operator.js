@@ -1,6 +1,5 @@
 'use strict';
-// Ayudas breves integradas en el espacio de trabajo; no abren ventanas automáticamente.
-localStorage.setItem('ingefix-tour-v3','done');tourStarted=true;
+// La guía introductoria se abre en la primera visita a cada versión del flujo.
 Object.assign(labels,{overview:'Inicio',journey:'Guía visual',operations:'Otras tareas',abc:'Clasificador ABC',replenish:'ROP · Reposición',forecast:'Proyección de demanda',scan:'WMS · Escanear',commitments:'Pedidos por preparar',counts:'Conteos',receipts:'Recepciones',credits:'Notas de crédito'});
 const simpleSteps={
  overview:[['Mira la tarea','El sistema propone qué producto revisar primero.'],['Confirma en bodega','Escanea y cuenta lo que encuentres.'],['Resuelve el pendiente','Revisa una diferencia o prepara la reposición.']],
@@ -30,7 +29,8 @@ const overviewWithOperator=overview;
 function taskExplanation(p){
  if(p.order_shortage)return 'Hay un pedido por entregar y el saldo registrado no alcanza. Confirma cuánto hay antes de prometer la entrega.';
  if(p.upcoming_orders)return 'Este producto se necesita para un pedido dentro de los próximos siete días. Confirma que esté disponible.';
- if(p.wms_alert)return 'Queda poco según el registro. Cuenta antes de que el encargado pida más a Santiago.';
+ if(p.wms_alert)return 'Llegó al punto de pedido. Cuenta físicamente antes de preparar la reposición a Santiago.';
+ if(p.count_alert)return 'Se acerca al punto de pedido. Cuenta ahora para confirmar el saldo físico antes de decidir la reposición.';
  if(p.discrepancy)return 'El último conteo no coincidió con el registro. Necesitamos volver a comprobarlo.';
  if(p.abc==='A')return 'Este producto se mueve mucho. Revisarlo con frecuencia ayuda a detectar faltantes a tiempo.';
  return 'Le corresponde una revisión de rutina para mantener el inventario actualizado.';

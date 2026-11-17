@@ -43,16 +43,24 @@ def read_state(db,products):
         p['upcoming_orders']=len(rows);p['upcoming_quantity']=required
         p['order_shortage']=max(0,required-p['erp_stock']) if required and p['erp_stock'] is not None else None
         reasons=[]
-        if p['rop'] is not None and p['position'] is not None and p['position']<=p['rop']:reasons.append('Alcanzó el punto de pedido: verificar antes de reponer')
+        if p['rop'] is not None and p['position'] is not None and p['position']<=p['rop']:
+            reasons.append('Llegó al punto de pedido: contar físicamente antes de preparar la reposición')
+        elif p.get('count_alert'):
+            reasons.append(f"Se acerca al ROP: contar ahora ({p['position']:g} disponibles; conteo desde {p['count_trigger']:g})")
         if required:reasons.append(f"{len(rows)} pedido(s) próximos requieren {required:g} unidades")
         if p['order_shortage']:reasons.append('El saldo registrado no cubre esos compromisos: confirmar físicamente')
         if p['discrepancy']:reasons.append('Último conteo con diferencia')
-        if p['abc']=='A':reasons.append('Clase A: concentra movimiento y conviene verificarla con mayor frecuencia')
+        if p.get('count_alert') and p['abc'] in ('A','B'):
+            reasons.append(f"Clase {p['abc']}: prioridad alta por movimiento y cercanía al ROP")
+        elif p.get('count_alert'):
+            reasons.append(f"Clase {p['abc']}: conteo preventivo por cercanía al ROP")
+        elif p['abc']=='A':reasons.append('Clase A: concentra movimiento y conviene verificarla con mayor frecuencia')
         p['task_reasons']=reasons
         p['wms_alert']=bool(p['rop'] is not None and p['position'] is not None and p['position']<=p['rop'])
+        p['priority']+=(200 if p['risk']=='quiebre' else 150 if p['wms_alert'] else 0)
         p['priority']+=100 if p['order_shortage'] else 60 if rows else 0
         recent=bool(p['count_matches_snapshot'] and p['last_count'] and p['last_count']['created_at'][:10]==today.isoformat())
-        p['recommended_count']=bool(p['due'] or ((p['wms_alert'] or rows) and not recent))
+        p['recommended_count']=bool(p['due'] or ((p['wms_alert'] or p.get('count_alert') or rows) and not recent))
     products.sort(key=lambda p:(-p['priority'],-(p['outbound'] or 0),p['code']))
     return dict(inbound=inbound,credits=credits,physical_events=physical,commitments=commitments,
                 movements=[dict(r) for r in db.execute('SELECT * FROM erp_movements ORDER BY day DESC LIMIT 3000')],
