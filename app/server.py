@@ -354,12 +354,12 @@ class Handler(BaseHTTPRequestHandler):
     def valid_host(self):
         host=self.headers.get('Host','').split(':')[0]
         if host=='localhost':return True
-        if host.lower().endswith('.trycloudflare.com'):return True
+        if host.lower().endswith(('.trycloudflare.com','.onrender.com')):return True
         try:return ipaddress.ip_address(host).is_private or ipaddress.ip_address(host).is_loopback
         except ValueError:return False
     def expected_origin(self):
         host=self.headers.get('Host','')
-        return ('https://' if host.lower().endswith('.trycloudflare.com') else 'http://')+host
+        return ('https://' if host.lower().endswith(('.trycloudflare.com','.onrender.com')) else 'http://')+host
     def send(self,status,data,kind='application/json; charset=utf-8'):
         content=json.dumps(data,ensure_ascii=False,allow_nan=False).encode() if kind.startswith('application/json') else data
         self.send_response(status)
