@@ -38,6 +38,7 @@ SESSIONS = {}
 RUNNING_REVISION = hashlib.sha256(b''.join((ROOT/p).read_bytes() for p in ('app/server.py','app/domain.py','app/static/app.js','app/static/operations.js','app/static/barcodes.js'))).hexdigest()[:16]
 WORKSPACE_ID = hashlib.sha256(str(ROOT).lower().encode()).hexdigest()[:16]
 SYNC_STATUS={'last_attempt':None,'connected':False,'message':'Sin lectura comprobada'}
+FRONTEND_ORIGIN=os.environ.get('INGEFIX_FRONTEND_ORIGIN','https://ingefix-control-logistico-ui.onrender.com').rstrip('/')
 
 
 class InventoryHTTPServer(ThreadingHTTPServer):
@@ -210,8 +211,9 @@ def mutate(db,path,b):
         code=required(b.get('code'),'SKU',100)
         p=db.execute('SELECT * FROM products WHERE code=?',(code,)).fetchone()
         if not p: raise ValueError('SKU no encontrado')
-        loc=required(b.get('location'),'Ubicación')
-        if not p['location'] or loc!=p['location']: raise ValueError('Asigne primero la ubicación y confirme el conteo en ella')
+        loc=str(b.get('location') or p['location'] or '').strip()[:80]
+        if p['location'] and loc!=p['location']: raise ValueError('Location does not match the registered shelf location.')
+        if any(ord(ch)<32 for ch in loc):raise ValueError('Location has invalid control characters.')
         if b.get('snapshot_version')!=p['snapshot_version']: raise ValueError('El saldo cambió: actualice antes de contar')
         qty=number(b.get('quantity'),'Cantidad')
         op=required(b.get('operator'),'Responsable',80)
@@ -219,14 +221,15 @@ def mutate(db,path,b):
         note=str(b.get('note',''))[:1000]
         if p['erp_stock'] is not None and qty!=p['erp_stock'] and reason=='Sin diferencia':
             raise ValueError('Existe diferencia: indique el motivo o seleccione Por investigar')
+        if loc and not p['location']:
+            db.execute('UPDATE products SET location=? WHERE code=?',(loc,code))
+            log(db,'Location observed during count',f'{code}: {loc}')
         db.execute('INSERT INTO counts VALUES(?,?,?,?,?,?,?,?,?,?,?)',(count_id,code,qty,p['erp_stock'],loc,op,reason,note,now(),p['snapshot_version'],'pendiente' if qty!=p['erp_stock'] else 'coincide'))
-        log(db,'Conteo físico',f'{code}: {qty} en {loc}, responsable {op}; sin ajuste de Softland')
+        log(db,'Conteo fisico',f'{code}: {qty} en {loc or "location pending"}, responsable {op}; sin ajuste de Softland')
         return dict(id=count_id)
     if path=='/api/locations':
-        code=required(b.get('code'),'SKU',100);loc=required(b.get('location'),'Ubicación',40).upper()
-        import re
-        if not re.fullmatch(r'TCO-[A-Z0-9]{1,4}-[A-Z0-9]{1,4}-[A-Z0-9]{1,4}',loc):
-            raise ValueError('Formato esperado: TCO-pasillo-rack-nivel, por ejemplo TCO-A01-R02-N01')
+        code=required(b.get('code'),'SKU',100);loc=required(b.get('location'),'Location',80)
+        if any(ord(ch)<32 for ch in loc):raise ValueError('Location has invalid control characters.')
         if not db.execute('SELECT 1 FROM products WHERE code=?',(code,)).fetchone():raise ValueError('SKU no encontrado')
         db.execute('UPDATE products SET location=? WHERE code=?',(loc,code))
         log(db,'Ubicación asignada',f'{code}: {loc} (asignación de prototipo; verificar en bodega)')
@@ -360,13 +363,34 @@ class Handler(BaseHTTPRequestHandler):
     def expected_origin(self):
         host=self.headers.get('Host','')
         return ('https://' if host.lower().endswith(('.trycloudflare.com','.onrender.com')) else 'http://')+host
-    def send(self,status,data,kind='application/json; charset=utf-8'):
+    def allowed_origin(self,origin):
+        return bool(origin and origin in (self.expected_origin(),FRONTEND_ORIGIN))
+    def send_cors_headers(self):
+        origin=self.headers.get('Origin')
+        if self.allowed_origin(origin):
+            self.send_header('Access-Control-Allow-Origin',origin)
+            self.send_header('Access-Control-Allow-Credentials','true')
+            self.send_header('Vary','Origin')
+    def send(self,status,data,kind='application/json; charset=utf-8',extra_headers=None):
         content=json.dumps(data,ensure_ascii=False,allow_nan=False).encode() if kind.startswith('application/json') else data
         self.send_response(status)
         for k,v in [('Content-Type',kind),('Content-Length',str(len(content))),('Cache-Control','no-store'),
                     ('X-Content-Type-Options','nosniff'),('Referrer-Policy','same-origin'),
                     ('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'self'")]:self.send_header(k,v)
+        if urlparse(self.path).path.startswith('/api/'):self.send_cors_headers()
+        for k,v in (extra_headers or {}).items():self.send_header(k,v)
         self.end_headers();self.wfile.write(content)
+    def do_OPTIONS(self):
+        if not self.valid_host():return self.send(403,dict(error='Host no permitido'))
+        if not urlparse(self.path).path.startswith('/api/') or not self.allowed_origin(self.headers.get('Origin')):
+            return self.send(403,dict(error='Origen no permitido'))
+        self.send_response(204)
+        self.send_cors_headers()
+        self.send_header('Access-Control-Allow-Methods','GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers','Content-Type')
+        self.send_header('Access-Control-Max-Age','600')
+        self.send_header('Content-Length','0')
+        self.end_headers()
     def do_GET(self):
         if not self.valid_host():return self.send(403,dict(error='Host no permitido'))
         path=urlparse(self.path).path
@@ -398,12 +422,12 @@ class Handler(BaseHTTPRequestHandler):
             w.writerow(['codigo_softland','descripcion','clase_abc','salidas','rotacion','participacion_pct','acumulado_pct','ubicacion'])
             for p in sorted(products,key=lambda p:p['volume_rank'] or 100000):
                 w.writerow([csv_safe(v) for v in [p['code'],p['name'],p['abc'],p['outbound'],p['rotation'],round(p['share']*100,4),round(p['cumulative_share']*100,4),p['location']]])
-            return self.send(200,('\ufeff'+out.getvalue()).encode(),'text/csv; charset=utf-8')
+            return self.send(200,('\ufeff'+out.getvalue()).encode(),'text/csv; charset=utf-8',{'Content-Disposition':'attachment; filename="clasificacion-abc.csv"'})
         if path=='/api/export':
             with LOCK,connect() as db:rows=[dict(r) for r in db.execute('SELECT * FROM orders ORDER BY created_at DESC')]
             out=io.StringIO();w=csv.writer(out,delimiter=';');w.writerow(['id','code','quantity','status','created_at','scenario','reason'])
             for r in rows:w.writerow([csv_safe(v) for v in r.values()])
-            return self.send(200,('\ufeff'+out.getvalue()).encode(),'text/csv; charset=utf-8')
+            return self.send(200,('\ufeff'+out.getvalue()).encode(),'text/csv; charset=utf-8',{'Content-Disposition':'attachment; filename="solicitudes-ingefix.csv"'})
         if path=='/api/health':return self.send(200,dict(ok=True,application='ingefix',revision=RUNNING_REVISION,workspace=WORKSPACE_ID,mode='local',erp_connected=False))
         if path in ('/','/bodega'):path='/index.html'
         file=(ROOT/'app'/'static'/path.lstrip('/')).resolve()
@@ -416,7 +440,7 @@ class Handler(BaseHTTPRequestHandler):
         # API local sin cookies ni CORS. JSON obligatorio bloquea POST simple desde otros sitios.
         if self.headers.get('Content-Type','').split(';')[0]!='application/json':return self.send(415,dict(error='Solo application/json'))
         origin=self.headers.get('Origin')
-        if origin and origin!=self.expected_origin():return self.send(403,dict(error='Origen no permitido'))
+        if origin and not self.allowed_origin(origin):return self.send(403,dict(error='Origen no permitido'))
         try:
             length=int(self.headers.get('Content-Length','0'))
             if length<=0 or length>6_000_000:raise ValueError('Tamaño de petición no permitido')
@@ -433,6 +457,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header('Content-Type','application/json')
                 self.send_header('Cache-Control','no-store')
                 self.send_header('Set-Cookie',f'ingefix_session={token}; HttpOnly; SameSite=Strict; Path=/')
+                self.send_cors_headers()
                 self.send_header('Content-Length',str(len(content)));self.end_headers();self.wfile.write(content)
                 return
             if not self.authorized():return self.send(401,dict(error='Acceso requerido'))

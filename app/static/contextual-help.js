@@ -106,6 +106,10 @@ function renderPenguinAlert() {
 const renderBeforeContextGuide = render;
 render = function () {
   renderBeforeContextGuide();
+  document.querySelectorAll('#page [href^="/api/"], #page [src^="/api/"]').forEach(node => {
+    const attribute = node.hasAttribute('href') ? 'href' : 'src';
+    node.setAttribute(attribute, apiUrl(node.getAttribute(attribute)));
+  });
   const policyForm = document.querySelector('#settings-form');
   if (policyForm && !policyForm.elements.planning_confirmed) {
     policyForm.querySelector('.form-grid')?.insertAdjacentHTML('beforeend', `<label class="check-label wide"><input name="planning_confirmed" type="checkbox" ${S.settings.planning_confirmed ? 'checked' : ''}>Confirmo que el plazo y el colch\u00f3n ingresados fueron validados con bodega/abastecimiento para esta demostraci\u00f3n.</label>`);

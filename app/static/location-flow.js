@@ -1,0 +1,14 @@
+'use strict';
+
+// The first cycle count can happen before the warehouse map has been digitized.
+countModal = function (product) {
+  if (!product) return toast('Selecciona un producto para contar', true);
+  const location = product.location
+    ? `<input name="location" type="hidden" value="${esc(product.location)}"><p class="field-note">Ubicaci\u00f3n registrada: <strong>${esc(product.location)}</strong></p>`
+    : `<label for="count-location">Ubicaci\u00f3n del estante (opcional)</label><input id="count-location" name="location" maxlength="80" placeholder="Copia el c\u00f3digo que ves en el estante"><p class="field-note">Si no tiene letrero o no lo conoces, d\u00e9jalo vac\u00edo. Puedes contar igual.</p>`;
+  showModal('Confirmar inventario', `${esc(product.name)}<br><span class="sku">${esc(product.code)}</span>`, `<form id="count-form" data-code="${esc(product.code)}"><input name="request_id" type="hidden" value="${crypto.randomUUID ? crypto.randomUUID() : fallbackUUID()}">${location}<label for="quantity">Cantidad que encontraste (${esc(product.unit)})</label><input class="count-input" id="quantity" name="quantity" type="number" min="0" step="0.001" placeholder="0" required autofocus><p>Cuenta primero y registra lo que ves. Cero tambi\u00e9n es una cantidad v\u00e1lida.</p><div class="form-grid"><div><label for="operator">Responsable</label><input id="operator" name="operator" value="${esc(localStorage.getItem('ingefix-operator') || '')}" maxlength="80" required></div><div><label for="reason">Motivo si hay diferencia</label><select id="reason" name="reason"><option>Por investigar</option><option>Recepci\u00f3n pendiente de registrar</option><option>Salida pendiente de registrar</option><option>Ubicaci\u00f3n incorrecta</option><option>Error de unidad de medida</option><option>Da\u00f1o o merma</option><option>Sin diferencia</option></select></div><div class="wide"><label for="note">Observaci\u00f3n (opcional)</label><textarea id="note" name="note" maxlength="1000"></textarea></div></div><div class="form-actions"><button class="btn" type="button" data-action="close-modal">Volver</button><button class="btn primary" type="submit">Guardar conteo</button></div><div class="form-error"></div></form>`);
+};
+
+locationModal = function (product) {
+  showModal('Guardar ubicaci\u00f3n', `${esc(product.name)}<br><span class="sku">${esc(product.code)}</span>`, `<form id="location-form" data-code="${esc(product.code)}"><label for="location">C\u00f3digo tal como aparece en el estante</label><input id="location" name="location" maxlength="80" placeholder="Ej.: pasillo, rack y nivel" value="${esc(product.location)}" required><p class="field-note">No hay que inventar un formato. Copia el c\u00f3digo real del letrero; si no existe, puedes volver y contar sin asignar ubicaci\u00f3n.</p><div class="form-actions"><button class="btn primary" type="submit">Guardar ubicaci\u00f3n</button></div><div class="form-error"></div></form>`);
+};
